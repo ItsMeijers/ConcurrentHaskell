@@ -1,44 +1,4 @@
-# Threads and MVars
-
-## Threads
-
-Forking a new thread of control:
-
-```haskell
-forkIO :: IO () -> IO ThreadId
-```
-
-If the thread has effects, those effects will be interleaved in an indeterminate fashion with the effects from other threads.
-
-Deloying a thread which takes an argument representing a number of microseconds an waits for that amount of time before returning.
-
-```haskell
-threadDelay  :: Int -> IO ()
-```
-
-Reminder example:
-
-```haskell
-import Control.Concurrent
-import Text.Printf
-import Control.Monad
-
-main =
-    forever $ do
-        s <- getLine
-        forkIO $ setReminder s
-
-setReminder :: String -> IO ()
-setReminder s = do
-    let t = read s :: Int
-    printf "Ok, I';; remind yo in %d seocnds\n" t
-    threadDelay (10^6 * t)
-    printf "%d seconds is is up! BING!"
-```
-
-Haskell programs terminate when main returns, even if there are other threads still running. The other threads simply stop running and cease to exist after main returns (See MVars logging example how to wait).
-
-## MVars
+# MVars
 
 `MVar` is the basic _communication_ mechanism provided by Concurrent Haskell.
 
@@ -63,7 +23,7 @@ Example use cases for `MVar`:
 * An `MVar` is a _container for mutable state_.
 * An `Mvar` is a _building block_ for constructing larger concurrent datastructures.
 
-### Example: Mvar as a Simple Channel: A logging service
+## Example: Mvar as a Simple Channel: A logging service
 
 ```haskell
 -- | Having a Logger ba value that we pass around rather than a globally known top-level value is good practice. For example this allows multiple loggers.
@@ -111,7 +71,7 @@ logExample = do
 
 The `MVar` is only a one place channel, so therefore if multiple threads where writing to this `Logger` it would probably not able to process everything quickly enough and get block in `logMessage`.
 
-### MVar as a Container for Shared State
+## MVar as a Container for Shared State
 
 `MVar` provides the combination fo a lock and a mutable variable in Haskell. To acquire the lock, we take the `MVar`, whereas, to update the variable and release the lock, we put the `MVar`.
 
@@ -148,4 +108,22 @@ phoneBookExample = do
     lookUp s "unkown" >>= print
 ```
 
-With this sequence, we are storing an unevaluated expression in the `MVar`, but it is evaluated immediately after the putMVar. The lock is held only briefly, but not the thunk is also evaluated so we avoid building a long chain of thunks.
+With this sequence, we are storing an unevaluated expression in the `MVar`, but it is evaluated 
+immediately after the putMVar. The lock is held only briefly, but not the thunk is also
+evaluated so we avoid building a long chain of thunks.
+
+## Fairness
+
+No thead can be blocked _indefinitly_ on an `MVar` unless another thread holds that MVar
+_indefinitly_. Fairness allows the winning thread its operatino and calls putMVar, the scheduler
+wakes up the blocked thead and completes its blocked takeMVar, so the original winnig thread will
+immediately block when it tries to reacquire the handle. Hence this leads to perfect alternation
+the two threads. The only way that the alternation pattern can be broken if one thread is
+descheduled while it is not holding the `MVar`.
+
+A consequence of the fairness implemenation is that, when multiple threads are blocked in
+`takeMVar` and another thread does a `putMVar`, only one of the blocked threads becomes unblocked.
+This "single wakeup" property is a particularly important performance charasteristics when a
+large number of threads are contending for a single `MVar` The fairness guarantee together with
+the single wakeup property that keeps `MVar`s from being completely subsumed by software
+transaction memory.

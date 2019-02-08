@@ -40,10 +40,9 @@ readChan (MyChan readVar _) = do
 --   reading an item from one CHan does not remove it from the other.
 dupChan :: MyChan a -> IO (MyChan a)
 dupChan (MyChan _ writeVar) = do
-    hole <- readMVar writeVar  -- Uses the same write pointer as the original channel
+    hole       <- readMVar writeVar  -- Uses the same write pointer as the original channel
     newReadVar <- newMVar hole -- Creates a new read pointer
     return (MyChan newReadVar writeVar) -- combines the two and returns it
-
 
 -- TODO COMMENT!
 unGetChan :: MyChan a -> a -> IO ()

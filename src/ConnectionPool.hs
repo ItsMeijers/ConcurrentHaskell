@@ -114,5 +114,3 @@ mainTest :: IO ()
 mainTest = do
     connectionPool <- emptyConnectionPool (PoolSettings (ConnectionSettings "" 3333 1 1) 1)
     mapM_ (fmap print . execute connectionPool . testJob) [1..200]
-            
-            
